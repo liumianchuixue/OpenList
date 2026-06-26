@@ -72,7 +72,25 @@ detect_system() {
     # Termux environment
     if [ "$(is_termux)" = "true" ]; then
         log_info "Detected Termux environment"
-        FILENAME="openlist-linux-arm64-android.tar.gz"
+        case $ARCH in
+            aarch64|arm64)
+                ARCH="arm64"
+                ;;
+            armv7l)
+                ARCH="arm"
+                ;;
+            x86_64)
+                ARCH="amd64"
+                ;;
+            i686|i386)
+                ARCH="386"
+                ;;
+            *)
+                log_error "Unsupported architecture: $ARCH"
+                exit 1
+                ;;
+        esac
+        FILENAME="openlist-android-${ARCH}.tar.gz"
         INSTALL_DIR="${PREFIX}/bin"
         return
     fi
@@ -133,7 +151,7 @@ detect_system() {
 get_version() {
     if [ -z "$TAG" ]; then
         log_info "Fetching latest version..."
-        TAG=$(curl -sL "https://api.github.com/repos/${REPO}/releases/latest" | grep -o '"tag_name":.*' | sed 's/.*"tag_name":.*"//;s/"//' | sed 's/^v//')
+        TAG=$(curl -sL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' | head -1)
         if [ -z "$TAG" ]; then
             log_error "Failed to fetch latest version"
             exit 1
@@ -145,7 +163,7 @@ get_version() {
 # Download
 download() {
     local filename="$1"
-    local url="https://github.com/${REPO}/releases/download/v${TAG}/${filename}"
+    local url="https://github.com/${REPO}/releases/download/${TAG}/${filename}"
 
     log_info "Downloading ${filename}..."
     log_info "From: ${url}"
